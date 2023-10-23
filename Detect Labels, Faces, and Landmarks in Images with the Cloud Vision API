@@ -1,0 +1,618 @@
+Detect Labels, Faces, and Landmarks in Images with the Cloud Vision API
+45 minutes
+Free
+GSP037
+Google Cloud self-paced labs logo
+
+Overview
+The Cloud Vision API is a cloud-based service that allows you to analyze images and extract information. It can be used to detect objects, faces, and text in images. The Cloud Vision API lets you understand the content of an image by encapsulating powerful machine learning models in a simple REST API.
+
+In this lab, you will send images to the Cloud Vision API and see it detect objects, faces, and landmarks.
+
+What you'll learn
+Create a Cloud Vision API request and calling the API with curl
+Use the label, face, and landmark detection methods of the API
+Setup and requirements
+Before you click the Start Lab button
+Read these instructions. Labs are timed and you cannot pause them. The timer, which starts when you click Start Lab, shows how long Google Cloud resources will be made available to you.
+
+This hands-on lab lets you do the lab activities yourself in a real cloud environment, not in a simulation or demo environment. It does so by giving you new, temporary credentials that you use to sign in and access Google Cloud for the duration of the lab.
+
+To complete this lab, you need:
+
+Access to a standard internet browser (Chrome browser recommended).
+Note: Use an Incognito or private browser window to run this lab. This prevents any conflicts between your personal account and the Student account, which may cause extra charges incurred to your personal account.
+Time to complete the lab---remember, once you start, you cannot pause a lab.
+Note: If you already have your own personal Google Cloud account or project, do not use it for this lab to avoid extra charges to your account.
+How to start your lab and sign in to the Google Cloud Console
+Click the Start Lab button. If you need to pay for the lab, a pop-up opens for you to select your payment method. On the left is the Lab Details panel with the following:
+
+The Open Google Console button
+Time remaining
+The temporary credentials that you must use for this lab
+Other information, if needed, to step through this lab
+Click Open Google Console. The lab spins up resources, and then opens another tab that shows the Sign in page.
+
+Tip: Arrange the tabs in separate windows, side-by-side.
+
+Note: If you see the Choose an account dialog, click Use Another Account.
+If necessary, copy the Username from the Lab Details panel and paste it into the Sign in dialog. Click Next.
+
+Copy the Password from the Lab Details panel and paste it into the Welcome dialog. Click Next.
+
+Important: You must use the credentials from the left panel. Do not use your Google Cloud Skills Boost credentials.
+Note: Using your own Google Cloud account for this lab may incur extra charges.
+Click through the subsequent pages:
+
+Accept the terms and conditions.
+Do not add recovery options or two-factor authentication (because this is a temporary account).
+Do not sign up for free trials.
+After a few moments, the Cloud Console opens in this tab.
+
+Note: You can view the menu with a list of Google Cloud Products and Services by clicking the Navigation menu at the top-left. Navigation menu icon
+Activate Cloud Shell
+Cloud Shell is a virtual machine that is loaded with development tools. It offers a persistent 5GB home directory and runs on the Google Cloud. Cloud Shell provides command-line access to your Google Cloud resources.
+
+Click Activate Cloud Shell Activate Cloud Shell icon at the top of the Google Cloud console.
+When you are connected, you are already authenticated, and the project is set to your PROJECT_ID. The output contains a line that declares the PROJECT_ID for this session:
+
+Your Cloud Platform project in this session is set to YOUR_PROJECT_ID
+gcloud is the command-line tool for Google Cloud. It comes pre-installed on Cloud Shell and supports tab-completion.
+
+(Optional) You can list the active account name with this command:
+gcloud auth list
+Copied!
+Click Authorize.
+
+Your output should now look like this:
+
+Output:
+
+ACTIVE: *
+ACCOUNT: student-01-xxxxxxxxxxxx@qwiklabs.net
+
+To set the active account, run:
+    $ gcloud config set account `ACCOUNT`
+(Optional) You can list the project ID with this command:
+gcloud config list project
+Copied!
+Output:
+
+[core]
+project = <project_ID>
+Example output:
+
+[core]
+project = qwiklabs-gcp-44776a13dea667a6
+Note: For full documentation of gcloud, in Google Cloud, refer to the gcloud CLI overview guide.
+Task 1. Create an API key
+Since you'll be using curl to send a request to the Vision API, you'll need to generate an API key to pass in your request URL.
+
+To create an API key, from the Navigation menu go to APIs & Services > Credentials in the Cloud Console.
+
+Click Create Credentials and select API key.
+
+Create Credentials page displaying API key option
+
+Next, copy the key you just generated and click Close.
+Click Check my progress below to check your lab progress.
+
+Assessment Completed!
+Create an API Key
+Assessment Completed!
+Next, save it to an environment variable to avoid having to insert the value of your API key in each request.
+
+In Cloud Shell run the following command to set your project ID as an environment variable:
+export API_KEY=<YOUR_API_KEY>
+Copied!
+Task 2. Upload an image to a Cloud Storage bucket
+There are two ways to send an image to the Cloud Vision API for image detection: by sending the API a base64 encoded image string, or passing it the URL of a file stored in Cloud Storage.
+
+You'll be using a Cloud Storage URL. The first step is to create a Cloud Storage bucket to store your images.
+
+From the Navigation menu, select Cloud Storage > Buckets. Next to Buckets, click Create.
+
+Give your bucket a unique name:qwiklabs-gcp-03-a7d428b45f40-bucket.
+
+After naming your bucket, click Choose how to control access to objects.
+
+Uncheck Enforce public access prevention on this bucket and select the Fine-grained circle.
+
+All other settings for your bucket can remain as the default setting.
+
+Click Create.
+Upload an image to your bucket
+Right click on the following image of donuts, then click Save image as and save it to your computer as donuts.png.
+Donuts
+
+Go to the bucket you just created and click UPLOAD FILES, then select donuts.png.
+Bucket details page with the UPLOAD FILES button highlighted
+
+You should see the file in your bucket.
+
+Now you need to make this image publicly available.
+
+Click on the 3 dots for your image and select Edit access.
+Expanded More options menu with Edit permissions option highlighted
+
+Click Add entry then enter the following:
+
+Entity: Public
+Name: allUsers
+Access: Reader
+Then click Save.
+
+With the file in your bucket, you're ready to create a Cloud Vision API request, passing it the URL of this donuts picture.
+
+Click Check my progress below to check your lab progress.
+
+Assessment completed!
+Upload an image to your bucket
+Assessment completed!
+Task 3. Create your request
+Create a request.json file in Cloud Shell.
+
+Using the Cloud Shell code editor (by clicking the pencil icon in the Cloud Shell ribbon),
+Open Editor button
+
+or your preferred command line editor (nano, vim, or emacs), create a request.json file.
+
+Type or paste the following code into the file:
+Note: Replace my-bucket-name with the name of your storage bucket.
+{
+  "requests": [
+      {
+        "image": {
+          "source": {
+              "gcsImageUri": "gs://my-bucket-name/donuts.png"
+          }
+        },
+        "features": [
+          {
+            "type": "LABEL_DETECTION",
+            "maxResults": 10
+          }
+        ]
+      }
+  ]
+}
+Copied!
+Save the file.
+Task 4. Label detection
+The first Cloud Vision API feature you'll use is label detection. This method will return a list of labels (words) of what's in your image.
+
+Call the Cloud Vision API with curl:
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}
+Copied!
+Your response should look something like the following:
+
+{
+  "responses": [
+    {
+      "labelAnnotations": [
+        {
+          "mid": "/m/01dk8s",
+          "description": "Powdered sugar",
+          "score": 0.9861496,
+          "topicality": 0.9861496
+        },
+        {
+          "mid": "/m/01wydv",
+          "description": "Beignet",
+          "score": 0.9565117,
+          "topicality": 0.9565117
+        },
+        {
+          "mid": "/m/02wbm",
+          "description": "Food",
+          "score": 0.9424965,
+          "topicality": 0.9424965
+        },
+        {
+          "mid": "/m/0hnyx",
+          "description": "Pastry",
+          "score": 0.8173416,
+          "topicality": 0.8173416
+        },
+        {
+          "mid": "/m/02q08p0",
+          "description": "Dish",
+          "score": 0.8076026,
+          "topicality": 0.8076026
+        },
+        {
+          "mid": "/m/01ykh",
+          "description": "Cuisine",
+          "score": 0.79036003,
+          "topicality": 0.79036003
+        },
+        {
+          "mid": "/m/03nsjgy",
+          "description": "Kourabiedes",
+          "score": 0.77726763,
+          "topicality": 0.77726763
+        },
+        {
+          "mid": "/m/06gd3r",
+          "description": "Angel wings",
+          "score": 0.73792106,
+          "topicality": 0.73792106
+        },
+        {
+          "mid": "/m/06x4c",
+          "description": "Sugar",
+          "score": 0.71921736,
+          "topicality": 0.71921736
+        },
+        {
+          "mid": "/m/01zl9v",
+          "description": "Zeppole",
+          "score": 0.7111677,
+          "topicality": 0.7111677
+        }
+      ]
+    }
+  ]
+}
+The API was able to identify the specific type of donuts these are, powdered sugar. Cool! For each label the Vision API found, it returns a:
+
+description with the name of the item.
+score, a number from 0 - 1 indicating how confident it is that the description matches what's in the image.
+mid value that maps to the item's mid in Google's Knowledge Graph. You can use the mid when calling the Knowledge Graph API to get more information on the item.
+Task 5. Web detection
+In addition to getting labels on what's in your image, the Cloud Vision API can also search the internet for additional details on your image. Through the API's WebDetection method, you get a lot of interesting data back:
+
+A list of entities found in your image, based on content from pages with similar images.
+URLs of exact and partial matching images found across the web, along with the URLs of those pages.
+URLs of similar images, like doing a reverse image search.
+To try out web detection, use the same image of beignets and change one line in the request.json file (you can also venture out into the unknown and use an entirely different image).
+
+Edit the request.json file - under the features list, change type from LABEL_DETECTION to WEB_DETECTION. The request.json should now look like this:
+{
+  "requests": [
+      {
+        "image": {
+          "source": {
+              "gcsImageUri": "gs://my-bucket-name/donuts.png"
+          }
+        },
+        "features": [
+          {
+            "type": "WEB_DETECTION",
+            "maxResults": 10
+          }
+        ]
+      }
+  ]
+}
+Copied!
+Save the file.
+
+To send it to the Cloud Vision API, use the same curl command as before (just press the up arrow in Cloud Shell):
+
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}
+Copied!
+Dive into the response, starting with webEntities. Here are some of the entities this image returned:
+{
+  "responses": [
+    {
+      "webDetection": {
+        "webEntities": [
+          {
+            "entityId": "/m/0z5n",
+            "score": 0.8868,
+            "description": "Application programming interface"
+          },
+          {
+            "entityId": "/m/07kg1sq",
+            "score": 0.3139,
+            "description": "Encapsulation"
+          },
+          {
+            "entityId": "/m/0105pbj4",
+            "score": 0.2713,
+            "description": "Google Cloud Platform"
+          },
+          {
+            "entityId": "/m/01hyh_",
+            "score": 0.2594,
+            "description": "Machine learning"
+          },
+          ...
+        ]
+This image has been used in many presentations on Cloud ML APIs, which is why the API found the entities "Machine learning" and "Google Cloud Platform".
+
+If you inpsect the URLs under fullMatchingImages, partialMatchingImages, and pagesWithMatchingImages, you'll notice that many of the URLs point to this lab site (super meta!).
+
+Say you wanted to find other images of beignets, but not the exact same images. That's where the visuallySimilarImages part of the API response comes in handy. Here are a few of the visually similar images it found:
+
+        "visuallySimilarImages": [
+          {
+            "url": "https://media.istockphoto.com/photos/cafe-du-monde-picture-id1063530570?k=6&m=1063530570&s=612x612&w=0&h=b74EYAjlfxMw8G-G_6BW-6ltP9Y2UFQ3TjZopN-pigI="
+          },
+          {
+            "url": "https://s3-media2.fl.yelpcdn.com/bphoto/oid0KchdCqlSqZzpznCEoA/o.jpg"
+          },
+          {
+            "url": "https://s3-media1.fl.yelpcdn.com/bphoto/mgAhrlLFvXe0IkT5UMOUlw/348s.jpg"
+          },
+
+          ...
+
+]
+You can navigate to those URLs to see the similar images:
+
+powdered sugar beignet image 1
+
+powdered sugar beignet image 2
+
+powdered sugar beignet image 3
+
+And now you probably really want a powdered sugar beignet (sorry)! This is similar to searching by an image on Google Images.
+
+With Cloud Vision you can access this functionality with an easy to use REST API and integrate it into your applications.
+
+Task 6. Face detection
+Next explore the face detection methods of the Vision API.
+
+The face detection method returns data on faces found in an image, including the emotions of the faces and their location in the image.
+
+Upload a new image
+To use this method, you'll upload a new image with faces to the Cloud Storage bucket.
+
+Right click on the following image, then click Save image as and save it to your computer as selfie.png.
+Selfie image displaying two other people taking selfie images of themselves
+
+Now upload it to your Cloud Storage bucket the same way you did before, and make it public.
+Click Check my progress below to check your lab progress.
+
+Assessment completed!
+Upload an image for Face Detection to your bucket
+Assessment completed!
+Updating request file
+Next, update your request.json file with the following, which includes the URL of the new image, and uses face and landmark detection instead of label detection. Be sure to replace my-bucket-name with the name of your Cloud Storage bucket:
+{
+  "requests": [
+      {
+        "image": {
+          "source": {
+              "gcsImageUri": "gs://my-bucket-name/selfie.png"
+          }
+        },
+        "features": [
+          {
+            "type": "FACE_DETECTION"
+          },
+          {
+            "type": "LANDMARK_DETECTION"
+          }
+        ]
+      }
+  ]
+}
+Copied!
+Save the file.
+Calling the Vision API and parsing the response
+Now you're ready to call the Vision API using the same curl command you used above:
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}
+Copied!
+Take a look at the faceAnnotations object in the response. You'll notice the API returns an object for each face found in the image - in this case, three. Here's a clipped version of the response:
+{
+      "faceAnnotations": [
+        {
+          "boundingPoly": {
+            "vertices": [
+              {
+                "x": 669,
+                "y": 324
+              },
+              ...
+            ]
+          },
+          "fdBoundingPoly": {
+            ...
+          },
+          "landmarks": [
+            {
+              "type": "LEFT_EYE",
+              "position": {
+                "x": 692.05646,
+                "y": 372.95868,
+                "z": -0.00025268539
+              }
+            },
+            ...
+          ],
+          "rollAngle": 0.21619819,
+          "panAngle": -23.027969,
+          "tiltAngle": -1.5531756,
+          "detectionConfidence": 0.72354823,
+          "landmarkingConfidence": 0.20047489,
+          "joyLikelihood": "LIKELY",
+          "sorrowLikelihood": "VERY_UNLIKELY",
+          "angerLikelihood": "VERY_UNLIKELY",
+          "surpriseLikelihood": "VERY_UNLIKELY",
+          "underExposedLikelihood": "VERY_UNLIKELY",
+          "blurredLikelihood": "VERY_UNLIKELY",
+          "headwearLikelihood": "VERY_LIKELY"
+        }
+        ...
+     }
+}
+boundingPoly gives you the x,y coordinates around the face in the image.
+fdBoundingPoly is a smaller box than boundingPoly, focusing on the skin part of the face.
+landmarks is an array of objects for each facial feature, some you may not have even known about. This tells us the type of landmark, along with the 3D position of that feature (x,y,z coordinates) where the z coordinate is the depth. The remaining values give you more details on the face, including the likelihood of joy, sorrow, anger, and surprise.
+The response you're reading is for the person standing furthest back in the image - you can see he's making a kind of a silly face which explains the joyLikelihood of LIKELY.
+
+Task 7. Landmark annotation
+Landmark detection can identify common (and obscure) landmarks. It returns the name of the landmark, its latitude and longitude coordinates, and the location of where the landmark was identified in an image.
+
+Upload a new image
+To use this method, you'll upload a new image to the Cloud Storage bucket.
+
+Right click on the following image, then click Save image as and save it to your computer as city.png.
+Image of city
+
+Citation: Saint Basil's Cathedral, Moscow, Russia (December 15, 2017) by Nikolay Vorobyev on Unsplash, the free media repository. Retrieved from https://unsplash.com/photos/jaH3QF46gAY. This file is licensed under the Unsplash license.
+
+Now upload it to your Cloud Storage bucket the same way you did before, and make it public.
+Click Check my progress below to check your lab progress.
+
+Assessment completed!
+Upload an image for Landmark Annotation to your bucket
+Assessment completed!
+Updating request file
+Next, update your request.json file with the following, which includes the URL of the new image, and uses landmark detection. Be sure to replace my-bucket-name with the name of your Cloud Storage bucket:
+{
+  "requests": [
+      {
+        "image": {
+          "source": {
+              "gcsImageUri": "gs://my-bucket-name/city.png"
+          }
+        },
+        "features": [
+          {
+            "type": "LANDMARK_DETECTION",
+            "maxResults": 10
+          }
+        ]
+      }
+  ]
+}
+Copied!
+Calling the Vision API and parsing the response
+Now you're ready to call the Vision API using the same curl command you used above:
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}
+Copied!
+Look at the landmarkAnnotations part of the response:
+      "landmarkAnnotations": [
+        {
+          "mid": "/m/0hm_7",
+          "description": "Red Square",
+          "score": 0.8557956,
+          "boundingPoly": {
+            "vertices": [
+              {},
+              {
+                "x": 503
+              },
+              {
+                "x": 503,
+                "y": 650
+              },
+              {
+                "y": 650
+              }
+            ]
+          },
+          "locations": [
+            {
+              "latLng": {
+                "latitude": 55.753930299999993,
+                "longitude": 37.620794999999994
+              }
+...
+The Cloud Vision API was able to identify where the picture was taken and provides the map coordinates of the location (Saint Basil's Cathedral in Red Square, Moscow, Russia).
+
+The values in this response should look similar to the labelAnnotations response above:
+
+the mid of the landmark
+it's name (description)
+a confidence score
+The boundingPoly shows the region in the image where the landmark was identified.
+The locations key tells us the latitude longitude coordinates of the picture.
+Task 8. Object localization
+The Vision API can detect and extract multiple objects in an image with Object Localization. Object localization identifies multiple objects in an image and provides a LocalizedObjectAnnotation for each object in the image. Each LocalizedObjectAnnotation identifies information about the object, the position of the object, and rectangular bounds for the region of the image that contains the object.
+
+Object localization identifies both significant and less-prominent objects in an image.
+
+Object information is returned in English only. Cloud Translation can translate English labels into various other languages.
+
+To use this method, you'll use an existing image on the internet and update the request.json file.
+
+Updating request file
+Update your request.json file with the following, which includes the URL of the new image, and uses object localization.
+{
+  "requests": [
+    {
+      "image": {
+        "source": {
+          "imageUri": "https://cloud.google.com/vision/docs/images/bicycle_example.png"
+        }
+      },
+      "features": [
+        {
+          "maxResults": 10,
+          "type": "OBJECT_LOCALIZATION"
+        }
+      ]
+    }
+  ]
+}
+Copied!
+Calling the Vision API and parsing the response
+Now you're ready to call the Vision API using the same curl command you used above:
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json  https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}
+Copied!
+Next, look at the localizedObjectAnnotations part of the response:
+{
+  "responses": [
+    {
+      "localizedObjectAnnotations": [
+        {
+          "mid": "/m/01bqk0",
+          "name": "Bicycle wheel",
+          "score": 0.89648587,
+          "boundingPoly": {
+            "normalizedVertices": [
+              {
+                "x": 0.32076266,
+                "y": 0.78941387
+              },
+              {
+                "x": 0.43812272,
+                "y": 0.78941387
+              },
+              {
+                "x": 0.43812272,
+                "y": 0.97331065
+              },
+              {
+                "x": 0.32076266,
+                "y": 0.97331065
+              }
+            ]
+          }
+        },
+        {
+          "mid": "/m/0199g",
+          "name": "Bicycle",
+          "score": 0.886761,
+          "boundingPoly": {
+            "normalizedVertices": [
+              {
+                "x": 0.312,
+                "y": 0.6616471
+              },
+              {
+                "x": 0.638353,
+                "y": 0.6616471
+              },
+              {
+                "x": 0.638353,
+                "y": 0.9705882
+              },
+              {
+                "x": 0.312,
+                "y": 0.9705882
+              }
+            ]
+          }
+        },
+...
+As you can see, the Vision API was able to tell that this picture contains a bicycle and a bicycle wheel. The values in this response should look similar to the labelAnnotations response above: the mid of the object, it's name (name), a confidence score, and the boundingPoly shows the region in the image where the object was identified.
+
+Furthermore, the boundingPoly has a normalizedVertices key, which gives you the coordinates of the object in the image. These coordinates are normalized to a range of 0 to 1, where 0 represents the top left of the image, and 1 represents the bottom right of the image.
+
+Great! You successfully used the Vision API to analyze an image and extract information about the objects in the image.
